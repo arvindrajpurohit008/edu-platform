@@ -1,0 +1,4 @@
+import {createServerClient} from '@supabase/ssr'
+import {cookies} from 'next/headers'
+import {NextResponse} from 'next/server'
+export async function POST(req:Request){try{const c=await cookies();const s=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{cookies:{getAll:()=>c.getAll(),setAll:(x)=>x.forEach(({name,value,options})=>c.set(name,value,options))}});const {data:{user}}=await s.auth.getUser();if(!user)return NextResponse.json({error:'Unauthorized'},{status:401});const body=await req.json();const videoId=String(body.videoId||'');const delta=Math.min(15,Math.max(0,Number(body.deltaSeconds)||0));if(!videoId||delta<=0)return NextResponse.json({error:'Bad event'},{status:400});const {error}=await s.rpc('record_watch_time',{p_user_id:user.id,p_video_id:videoId,p_delta_seconds:delta});if(error)throw error;return NextResponse.json({ok:true})}catch(e:any){return NextResponse.json({error:e.message},{status:500})}}
