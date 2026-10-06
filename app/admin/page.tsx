@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useState, type CSSProperties } from "react";
+import { supabaseBrowser } from "@/lib/supabase";
 
 type Teacher = {
   id: string;
@@ -32,6 +32,7 @@ type Video = {
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+
   const [tab, setTab] = useState<"teachers" | "subjects" | "videos">(
     "teachers"
   );
@@ -58,6 +59,8 @@ export default function AdminPage() {
   }, []);
 
   async function checkOwner() {
+    const supabase = supabaseBrowser();
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -85,19 +88,33 @@ export default function AdminPage() {
   }
 
   async function loadData() {
+    const supabase = supabaseBrowser();
+
     const [teachersRes, subjectsRes, videosRes] = await Promise.all([
       supabase.from("teachers").select("*").order("name"),
       supabase.from("subjects").select("*").order("name"),
       supabase.from("videos").select("*").order("order_no"),
     ]);
 
-    if (teachersRes.data) setTeachers(teachersRes.data);
-    if (subjectsRes.data) setSubjects(subjectsRes.data);
-    if (videosRes.data) setVideos(videosRes.data);
+    if (teachersRes.data) {
+      setTeachers(teachersRes.data);
+    }
+
+    if (subjectsRes.data) {
+      setSubjects(subjectsRes.data);
+    }
+
+    if (videosRes.data) {
+      setVideos(videosRes.data);
+    }
   }
 
   async function addTeacher() {
-    if (!teacherName.trim()) return;
+    if (!teacherName.trim()) {
+      return;
+    }
+
+    const supabase = supabaseBrowser();
 
     const { error } = await supabase.from("teachers").insert({
       name: teacherName.trim(),
@@ -114,7 +131,11 @@ export default function AdminPage() {
   }
 
   async function addSubject() {
-    if (!subjectName.trim()) return;
+    if (!subjectName.trim()) {
+      return;
+    }
+
+    const supabase = supabaseBrowser();
 
     const { error } = await supabase.from("subjects").insert({
       name: subjectName.trim(),
@@ -129,6 +150,7 @@ export default function AdminPage() {
 
     setSubjectName("");
     setClassName("");
+
     await loadData();
   }
 
@@ -137,6 +159,8 @@ export default function AdminPage() {
       alert("Title and YouTube ID are required.");
       return;
     }
+
+    const supabase = supabaseBrowser();
 
     const { error } = await supabase.from("videos").insert({
       title: videoTitle.trim(),
@@ -168,69 +192,119 @@ export default function AdminPage() {
   }
 
   async function toggleTeacher(id: string, active: boolean) {
+    const supabase = supabaseBrowser();
+
     const { error } = await supabase
       .from("teachers")
       .update({ active: !active })
       .eq("id", id);
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     await loadData();
   }
 
   async function toggleSubject(id: string, active: boolean) {
+    const supabase = supabaseBrowser();
+
     const { error } = await supabase
       .from("subjects")
       .update({ active: !active })
       .eq("id", id);
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     await loadData();
   }
 
   async function toggleVideo(id: string, active: boolean) {
+    const supabase = supabaseBrowser();
+
     const { error } = await supabase
       .from("videos")
       .update({ active: !active })
       .eq("id", id);
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     await loadData();
   }
 
   async function deleteTeacher(id: string) {
-    if (!confirm("Delete this teacher?")) return;
+    if (!confirm("Delete this teacher?")) {
+      return;
+    }
+
+    const supabase = supabaseBrowser();
 
     const { error } = await supabase
       .from("teachers")
       .delete()
       .eq("id", id);
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     await loadData();
   }
 
   async function deleteSubject(id: string) {
-    if (!confirm("Delete this subject?")) return;
+    if (!confirm("Delete this subject?")) {
+      return;
+    }
+
+    const supabase = supabaseBrowser();
 
     const { error } = await supabase
       .from("subjects")
       .delete()
       .eq("id", id);
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     await loadData();
   }
 
   async function deleteVideo(id: string) {
-    if (!confirm("Delete this video?")) return;
+    if (!confirm("Delete this video?")) {
+      return;
+    }
+
+    const supabase = supabaseBrowser();
 
     const { error } = await supabase
       .from("videos")
       .delete()
       .eq("id", id);
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     await loadData();
+  }
+
+  async function logout() {
+    const supabase = supabaseBrowser();
+
+    await supabase.auth.signOut();
+
+    window.location.href = "/login";
   }
 
   if (loading) {
@@ -246,6 +320,9 @@ export default function AdminPage() {
       <main style={styles.center}>
         <h2>Access denied</h2>
         <p>Only the EduStreak owner can access this page.</p>
+        <button style={styles.primary} onClick={() => (window.location.href = "/login")}>
+          Go to Login
+        </button>
       </main>
     );
   }
@@ -260,13 +337,7 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <button
-          style={styles.logout}
-          onClick={async () => {
-            await supabase.auth.signOut();
-            window.location.href = "/login";
-          }}
-        >
+        <button style={styles.logout} onClick={logout}>
           Logout
         </button>
       </div>
@@ -314,11 +385,15 @@ export default function AdminPage() {
           <div style={styles.card}>
             <h2>Teachers</h2>
 
+            {teachers.length === 0 && (
+              <p style={styles.muted}>No teachers found.</p>
+            )}
+
             {teachers.map((teacher) => (
               <div style={styles.row} key={teacher.id}>
                 <div>
                   <strong>{teacher.name}</strong>
-                  <div>
+                  <div style={styles.status}>
                     {teacher.active ? "Published" : "Hidden"}
                   </div>
                 </div>
@@ -373,11 +448,16 @@ export default function AdminPage() {
           <div style={styles.card}>
             <h2>Subjects</h2>
 
+            {subjects.length === 0 && (
+              <p style={styles.muted}>No subjects found.</p>
+            )}
+
             {subjects.map((subject) => (
               <div style={styles.row} key={subject.id}>
                 <div>
                   <strong>{subject.name}</strong>
-                  <div>
+
+                  <div style={styles.status}>
                     Class {subject.class_name || "—"} ·{" "}
                     {subject.active ? "Published" : "Hidden"}
                   </div>
@@ -435,6 +515,7 @@ export default function AdminPage() {
             <input
               style={styles.input}
               type="number"
+              min="0"
               placeholder="Duration in seconds"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
@@ -453,8 +534,9 @@ export default function AdminPage() {
               onChange={(e) => setSubjectId(e.target.value)}
             >
               <option value="">Select subject</option>
+
               {subjects
-                .filter((s) => s.active)
+                .filter((subject) => subject.active)
                 .map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -468,8 +550,9 @@ export default function AdminPage() {
               onChange={(e) => setTeacherId(e.target.value)}
             >
               <option value="">Select teacher</option>
+
               {teachers
-                .filter((t) => t.active)
+                .filter((teacher) => teacher.active)
                 .map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>
                     {teacher.name}
@@ -480,6 +563,7 @@ export default function AdminPage() {
             <input
               style={styles.input}
               type="number"
+              min="1"
               placeholder="Order number"
               value={orderNo}
               onChange={(e) => setOrderNo(e.target.value)}
@@ -493,11 +577,16 @@ export default function AdminPage() {
           <div style={styles.card}>
             <h2>Videos</h2>
 
+            {videos.length === 0 && (
+              <p style={styles.muted}>No videos found.</p>
+            )}
+
             {videos.map((video) => (
               <div style={styles.row} key={video.id}>
                 <div>
                   <strong>{video.title}</strong>
-                  <div>
+
+                  <div style={styles.status}>
                     Chapter: {video.chapter || "—"} ·{" "}
                     {video.active ? "Published" : "Hidden"}
                   </div>
@@ -529,33 +618,53 @@ export default function AdminPage() {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
     padding: "32px",
     background: "#f5f7fb",
     color: "#111827",
   },
+
   center: {
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
+    gap: "12px",
+    padding: "24px",
+    textAlign: "center",
   },
+
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: "20px",
     marginBottom: "24px",
   },
+
   title: {
     margin: 0,
     fontSize: "32px",
   },
+
   subtitle: {
     color: "#6b7280",
+    marginTop: "8px",
   },
+
+  muted: {
+    color: "#6b7280",
+  },
+
+  status: {
+    color: "#6b7280",
+    marginTop: "4px",
+    fontSize: "14px",
+  },
+
   logout: {
     padding: "10px 16px",
     borderRadius: "8px",
@@ -563,11 +672,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: "white",
     cursor: "pointer",
   },
+
   tabs: {
     display: "flex",
     gap: "10px",
     marginBottom: "24px",
+    flexWrap: "wrap",
   },
+
   tab: {
     padding: "12px 20px",
     border: "1px solid #ddd",
@@ -575,6 +687,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "white",
     cursor: "pointer",
   },
+
   activeTab: {
     padding: "12px 20px",
     border: "1px solid #111827",
@@ -583,6 +696,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "white",
     cursor: "pointer",
   },
+
   card: {
     background: "white",
     borderRadius: "14px",
@@ -590,6 +704,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "20px",
     boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
   },
+
   input: {
     display: "block",
     width: "100%",
@@ -600,6 +715,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "8px",
     boxSizing: "border-box",
   },
+
   primary: {
     padding: "12px 20px",
     border: "none",
@@ -608,6 +724,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "white",
     cursor: "pointer",
   },
+
   row: {
     display: "flex",
     justifyContent: "space-between",
@@ -616,6 +733,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "16px 0",
     borderBottom: "1px solid #eee",
   },
+
   small: {
     padding: "8px 12px",
     marginRight: "8px",
@@ -624,6 +742,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "white",
     cursor: "pointer",
   },
+
   delete: {
     padding: "8px 12px",
     border: "none",
